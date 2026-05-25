@@ -28,7 +28,7 @@ python -m benchmark.roofline \
   --output-dir results/roofline
 ```
 
-If the detected GPU is not in the catalog, or you want exact values for your
+If the detected GPU is not in the catalog, or exact values are needed for the
 writeup, pass hardware numbers explicitly:
 
 ```bash
@@ -120,11 +120,10 @@ estimate.
 
 ## Phase 1 Attention Benchmarks
 
-Run the benchmark through `benchmark.benchmark`. Do not run the individual
-attention files directly; those files define modules used by the benchmark
-runner.
+Run the benchmark through `benchmark.benchmark`. The individual attention files
+define modules used by the benchmark runner and are not meant to be run directly.
 
-Start with a small sanity run:
+Starting with a small sanity run:
 
 ```bash
 python -m benchmark.benchmark \
@@ -140,7 +139,7 @@ python -m benchmark.benchmark \
   --prefix sanity_c512_b1
 ```
 
-Then scale context and batch size gradually:
+Then scaling context and batch size gradually:
 
 ```bash
 python -m benchmark.benchmark \
@@ -231,13 +230,13 @@ FLOP/byte). Decode points are deep in the memory-bound region — except MLA
 decode which reaches AI=266, close to the ridge point, because its unfused
 latent-to-KV up-projections dominate each decode step.
 
-## Suggested Study Plan
+## Study Plan
 
-Avoid running every possible combination at first. The useful study is staged:
+The experiments ran in stages rather than all at once:
 
 ### Stage 0: Sanity
 
-One small run to confirm the harness, outputs, and roofline overlay:
+A small run to confirm the harness, outputs, and roofline overlay:
 
 ```bash
 python -m benchmark.benchmark \
@@ -254,7 +253,7 @@ python -m benchmark.benchmark \
 
 ### Stage 1: Main Context Sweep
 
-Keep batch size and dtype fixed. Change only context length:
+Batch size and dtype fixed. Context length is the only variable:
 
 ```text
 dtype: fp16
@@ -263,10 +262,10 @@ contexts: 512, 1024, 2048, 4096, 8192
 attention: all
 ```
 
-This is the most important first study because it shows how KV cache and
-attention cost grow with sequence length.
+This is the most revealing first study — KV cache and attention cost growth with
+sequence length is the core question.
 
-Since the sanity run already covered context 512, run these next:
+Since the sanity run already covered context 512, the remaining runs were:
 
 ```bash
 python -m benchmark.benchmark \
@@ -322,7 +321,7 @@ python -m benchmark.benchmark \
   --prefix c8192_b1_fp16
 ```
 
-If the 8192 run is slow or fails, rerun only decode mode:
+If the 8192 run is slow or fails, decode mode alone works fine:
 
 ```bash
 python -m benchmark.benchmark \
@@ -339,8 +338,8 @@ python -m benchmark.benchmark \
   --prefix c8192_b1_fp16_decode
 ```
 
-After these runs, overlay one result file at a time on the roofline. Start with
-the longest context because it should make decode memory pressure most visible:
+After these runs, I overlaid result files on the roofline one at a time. The
+longest context makes decode memory pressure most visible:
 
 ```bash
 python -m benchmark.roofline \
@@ -350,7 +349,7 @@ python -m benchmark.roofline \
   --prefix gpu_roofline_with_c8192_b1_fp16
 ```
 
-For locally regenerated plots, pass the hardware numbers and title explicitly:
+For locally regenerated plots, hardware numbers and title passed explicitly:
 
 ```bash
 python -m benchmark.roofline \
@@ -374,7 +373,7 @@ D = decode
 right-side panel = exact arithmetic intensity and achieved GFLOP/s
 ```
 
-If labels are still too busy, hide them and use only the side panel:
+If labels get too busy, hiding them and using only the side panel works better:
 
 ```bash
 python -m benchmark.roofline \
@@ -390,7 +389,7 @@ python -m benchmark.roofline \
 
 ### Stage 2: Batch Scaling
 
-Pick two representative contexts and scale batch size:
+Two representative contexts with batch size as the variable:
 
 ```text
 dtype: fp16
@@ -399,9 +398,9 @@ batch sizes: 1, 2, 4, 8
 attention: all
 ```
 
-Stop increasing batch size when a run OOMs or throughput stops improving.
+I stopped increasing batch size when a run OOMs or throughput stopped improving.
 
-Run decode-first batch scaling at context 2048:
+Batch scaling at context 2048, decode-only:
 
 ```bash
 python -m benchmark.benchmark \
@@ -444,7 +443,7 @@ python -m benchmark.benchmark \
   --prefix c2048_b8_fp16_decode
 ```
 
-Then repeat for context 8192:
+Same for context 8192:
 
 ```bash
 python -m benchmark.benchmark \
@@ -487,7 +486,7 @@ python -m benchmark.benchmark \
   --prefix c8192_b8_fp16_decode
 ```
 
-If all three 8192 runs are stable, optionally try batch 16:
+The 8192 runs were stable, so batch 16 was added as a stretch:
 
 ```bash
 python -m benchmark.benchmark \
@@ -504,7 +503,7 @@ python -m benchmark.benchmark \
   --prefix c8192_b16_fp16_decode
 ```
 
-Stage 2 interpretation target:
+Questions going into Stage 2:
 
 ```text
 Does decode tokens/sec scale with batch size?
@@ -512,7 +511,7 @@ Where does each attention type stop improving?
 Does MQA/GQA/MLA keep scaling longer than MHA because KV cache is smaller?
 ```
 
-Generate the Stage 2 batch-scaling plot:
+Stage 2 batch-scaling plot:
 
 ```bash
 python -m benchmark.plots \
@@ -524,7 +523,7 @@ python -m benchmark.plots \
 
 ![Batch scaling — FP16 decode, context 2048 and 8192](results/plots/batch_scaling_fp16_decode.png)
 
-Current Stage 2 observations:
+Stage 2 observations:
 
 ```text
 Context 2048:
@@ -554,9 +553,8 @@ GQA estimated full-stack KV cache: 6.0 GiB
 MLA estimated full-stack KV cache: 3.0 GiB
 ```
 
-This is the clearest Stage 2 deployment lesson so far: MQA has far lower KV
-memory and much better decode batch scaling than MHA in this synthetic
-attention-block benchmark.
+The clearest Stage 2 finding: MQA has far lower KV memory and much better
+decode batch scaling than MHA in this attention-block benchmark.
 
 Important interpretation caveat:
 
@@ -596,7 +594,7 @@ quality than a single shared K/V head.
 
 ### Stage 3: Dtype Comparison
 
-Do not repeat the full matrix immediately. Compare dtypes on a small subset:
+Rather than running the full matrix, I focused on a targeted subset:
 
 ```text
 dtypes: fp16, bf16, fp32
@@ -606,17 +604,17 @@ attention: all
 ```
 
 FP16 and BF16 are the most relevant serving dtypes on the RTX 4090. FP32 is
-mainly useful as a contrast point because it is slower and uses more memory.
+there as a contrast point — slower and heavier, but useful as a ceiling reference.
 
-Start with decode-only at batch size 4. We already have the matching FP16
-baselines:
+Starting with decode-only at batch size 4. FP16 baselines already existed from
+Stage 2:
 
 ```text
 results/benchmarks/c2048_b4_fp16_decode.csv
 results/benchmarks/c8192_b4_fp16_decode.csv
 ```
 
-Run BF16:
+BF16:
 
 ```bash
 python -m benchmark.benchmark \
@@ -646,7 +644,7 @@ python -m benchmark.benchmark \
   --prefix c8192_b4_bf16_decode
 ```
 
-Run FP32:
+FP32:
 
 ```bash
 python -m benchmark.benchmark \
@@ -676,7 +674,7 @@ python -m benchmark.benchmark \
   --prefix c8192_b4_fp32_decode
 ```
 
-Stage 3 interpretation target:
+Questions going into Stage 3:
 
 ```text
 How close are BF16 and FP16 on RTX 4090?
@@ -685,7 +683,7 @@ Does dtype change the relative ranking of MHA/MQA/GQA/MLA?
 How does estimated KV cache change when dtype bytes double from FP16/BF16 to FP32?
 ```
 
-Only if these four runs look good, add batch size 1 dtype comparisons:
+The four batch-4 runs were clean, so batch-size-1 dtype comparisons followed:
 
 ```bash
 python -m benchmark.benchmark --attention all --context 2048 --batch-size 1 --query-heads 16 --head-dim 128 --dtype bf16 --mode decode --warmup 3 --iterations 20 --output-dir results/benchmarks --prefix c2048_b1_bf16_decode
@@ -694,7 +692,7 @@ python -m benchmark.benchmark --attention all --context 2048 --batch-size 1 --qu
 python -m benchmark.benchmark --attention all --context 8192 --batch-size 1 --query-heads 16 --head-dim 128 --dtype fp32 --mode decode --warmup 3 --iterations 20 --output-dir results/benchmarks --prefix c8192_b1_fp32_decode
 ```
 
-Current Stage 3 observations:
+Stage 3 observations:
 
 ```text
 BF16 vs FP16 (all contexts and batches):
@@ -736,7 +734,7 @@ Batch-1, context 2048 reversal:
 
 ### Stage 4: GQA/MLA Shape Sweep
 
-Only after the basic curves are clear, vary grouping/compression:
+Once the basic curves were clear, I varied the grouping and compression:
 
 ```text
 GQA group sizes: 2, 4, 8
@@ -746,10 +744,9 @@ batch-size: 4
 dtype: fp16
 ```
 
-Group size 4 and latent dim 256 are already covered by prior stages, so only
-the new shapes need to be run. Use `--attention gqa` and `--attention mla`
-directly rather than `--attention all` — MHA and MQA have no shape parameters
-to vary and their baselines already exist.
+Group size 4 and latent dim 256 were already in prior results, so only the new
+shapes needed to run. I used `--attention gqa` and `--attention mla` directly —
+MHA and MQA have no shape parameters to vary and their baselines already existed.
 
 GQA group size sweep:
 
@@ -815,7 +812,7 @@ python -m benchmark.benchmark \
   --prefix c8192_b4_mla_l512_fp16_decode
 ```
 
-Stage 4 interpretation target:
+Questions going into Stage 4:
 
 ```text
 Does GQA throughput increase monotonically as group size grows (fewer KV heads)?
@@ -836,7 +833,7 @@ The paired same-budget configs (MQA vs MLA-128, GQA-g8 vs MLA-256, GQA-g4 vs
 MLA-512) directly test whether the attention mechanism matters beyond its memory
 cost.
 
-Generate the Stage 4 shape-sweep plot:
+Stage 4 shape-sweep plot:
 
 ```bash
 python -m benchmark.plots \
@@ -857,7 +854,7 @@ blue diamond:                MHA reference
 gray brackets at 0.75, 1.5: same-budget GQA vs MLA gap (+11%)
 ```
 
-Current Stage 4 observations:
+Stage 4 observations:
 
 ```text
 GQA group size sweep (c8192, b4, fp16, decode):
