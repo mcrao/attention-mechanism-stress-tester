@@ -1,5 +1,7 @@
 # Attention Mechanism Stress Tester
 
+![Real Bottleneck in LLM Inference](results/memory-wall-kv-eff.png)
+
 Systems benchmark for understanding how attention choices affect LLM inference
 throughput, latency, VRAM, and KV cache pressure.
 
