@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+results/benchmarks
+results/test_benchmarks
+.vscode/
+*.aux
+*.log
+*.out
+plan/
+manuscript/

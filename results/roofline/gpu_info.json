@@ -1,0 +1,30 @@
+{
+  "gpu": {
+    "name": "NVIDIA GeForce RTX 4090",
+    "uuid": "GPU-8f7fc451-f640-17cc-3f71-a06474dece16",
+    "total_memory_gb": 23.98828125,
+    "driver_version": "580.95.05",
+    "cuda_runtime_version": "12.8",
+    "torch_version": "2.8.0+cu128",
+    "compute_capability": "8.9",
+    "max_sm_clock_mhz": 3120.0,
+    "max_memory_clock_mhz": 10501.0,
+    "power_limit_watts": 450.0,
+    "detected_by": [
+      "torch",
+      "nvidia-smi"
+    ],
+    "platform": "Linux-6.8.0-85-generic-x86_64-with-glibc2.39",
+    "query_errors": null
+  },
+  "catalog_spec": {
+    "name_match": "RTX 4090",
+    "marketing_name": "NVIDIA GeForce RTX 4090",
+    "fp32_tflops": 82.6,
+    "fp16_tensor_tflops": 330.0,
+    "bf16_tensor_tflops": 330.0,
+    "memory_bandwidth_gbps": 1008.0,
+    "notes": "Approximate non-sparsity tensor peak."
+  },
+  "catalog_warning": null
+}
